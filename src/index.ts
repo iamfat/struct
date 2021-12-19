@@ -59,14 +59,14 @@ class TypeDef<T = unknown> {
 
 class StructDef<T = unknown> extends TypeDef<T> {
     constructor(defs: T) {
-        const byteLength = Object.values(defs)
-            .map(({ byteLength }) => byteLength)
+        const byteLength = Object.keys(defs)
+            .map((key) => defs[key].byteLength)
             .reduce((s, v) => s + v, 0);
         super({
             byteLength,
             decode: (view, offset) => {
                 const obj = {} as any;
-                Object.keys(defs).forEach(key => {
+                Object.keys(defs).forEach((key) => {
                     const def = defs[key];
                     if (offset >= view.byteLength) return;
                     obj[key] = def.decode(view, offset);
@@ -75,7 +75,7 @@ class StructDef<T = unknown> extends TypeDef<T> {
                 return obj;
             },
             encode: (view, offset, obj) => {
-                Object.keys(defs).forEach(key => {
+                Object.keys(defs).forEach((key) => {
                     const def = defs[key];
                     if (offset >= view.byteLength) return;
                     def.encode(view, offset, obj[key]);

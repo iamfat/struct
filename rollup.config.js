@@ -1,5 +1,4 @@
 import typescript from '@rollup/plugin-typescript';
-import { terser } from 'rollup-plugin-terser';
 
 export default [
     {
@@ -7,10 +6,9 @@ export default [
         output: {
             format: 'cjs',
             dir: 'lib',
-            exports: 'named',
             compact: true,
         },
-        plugins: [typescript({ declaration: true, declarationDir: 'lib' }), terser()],
+        plugins: [typescript({ declaration: true, declarationDir: 'lib' })],
     },
     {
         input: 'src/index.ts',
@@ -18,6 +16,6 @@ export default [
             format: 'esm',
             file: 'lib/index.mjs',
         },
-        plugins: [typescript(), terser()],
+        plugins: [typescript()],
     },
 ];
