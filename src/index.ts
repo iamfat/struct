@@ -117,13 +117,13 @@ export const int = new TypeDef<number>({
     },
 });
 
-export const int16_t = new TypeDef<number>({
-    byteLength: 2,
+export const int32_t = new TypeDef<number>({
+    byteLength: 4,
     decode: (view: DataView, offset: number) => {
-        return view.getInt16(offset);
+        return view.getInt32(offset);
     },
     encode: (view: DataView, offset: number, v: number) => {
-        view.setInt16(offset, v);
+        view.setInt32(offset, v);
     },
 });
 
@@ -137,6 +137,16 @@ export const uint32_t = new TypeDef<number>({
     },
 });
 
+export const int16_t = new TypeDef<number>({
+    byteLength: 2,
+    decode: (view: DataView, offset: number) => {
+        return view.getInt16(offset);
+    },
+    encode: (view: DataView, offset: number, v: number) => {
+        view.setInt16(offset, v);
+    },
+});
+
 export const uint16_t = new TypeDef<number>({
     byteLength: 2,
     decode: (view: DataView, offset: number) => {
@@ -147,16 +157,6 @@ export const uint16_t = new TypeDef<number>({
     },
 });
 
-export const uint8_t = new TypeDef<number>({
-    byteLength: 1,
-    decode: (view: DataView, offset: number) => {
-        return view.getUint8(offset);
-    },
-    encode: (view: DataView, offset: number, v: number) => {
-        view.setUint8(offset, v);
-    },
-});
-
 export const int8_t = new TypeDef<number>({
     byteLength: 1,
     decode: (view: DataView, offset: number) => {
@@ -164,6 +164,16 @@ export const int8_t = new TypeDef<number>({
     },
     encode: (view: DataView, offset: number, v: number) => {
         view.setInt8(offset, v);
+    },
+});
+
+export const uint8_t = new TypeDef<number>({
+    byteLength: 1,
+    decode: (view: DataView, offset: number) => {
+        return view.getUint8(offset);
+    },
+    encode: (view: DataView, offset: number, v: number) => {
+        view.setUint8(offset, v);
     },
 });
 
@@ -201,5 +211,9 @@ export const LE = (type: TypeDef<number>) =>
         },
     });
 
-export const INT16_MIN = -32768;
-export const UINT16_MAX = 65535;
+export const INT16_MAX = 0x7fff;
+export const INT16_MIN = -INT16_MAX - 1;
+export const UINT16_MAX = 0xffff;
+export const INT32_MAX = 0x7fffffff;
+export const INT32_MIN = -0x7fffffff - 1;
+export const UINT32_MAX = 0xffffffff;

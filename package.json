@@ -1,6 +1,6 @@
 {
   "name": "@genee/struct",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "C-like struct for buffer parsing and packing",
   "main": "lib/index.js",
   "module": "lib/index.mjs",
