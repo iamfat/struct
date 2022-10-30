@@ -1,7 +1,9 @@
 # struct
+
 A C-like struct library for buffer parsing and packing
 
 ## Usage
+
 ```typescript
 import { struct, int16_t, uint16_t, uint8_t, LE, UINT16_MAX, INT16_MIN } from '../../lib/struct';
 
@@ -24,6 +26,5 @@ const SENSOR = struct({
 const parsed = SENSOR.parse(binaryData);
 
 parsed.humidity = 16;
-const newBuf = SENSOR.park(parsed);
-
+const newBuf = SENSOR.update({ version: 1 }).pack(parsed);
 ```

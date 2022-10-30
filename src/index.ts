@@ -1,8 +1,10 @@
+type TypeValues<T> = Partial<{ [K in keyof T]: string | number | ArrayBuffer | object }>;
+
 class TypeDef<T = unknown> {
     byteLength = 1;
 
     decode: (view: DataView, offset: number) => T;
-    encode: (view: DataView, offset: number, v: T) => void;
+    encode: (view: DataView, offset: number, v: TypeValues<T>) => void;
 
     constructor({
         byteLength,
@@ -11,7 +13,7 @@ class TypeDef<T = unknown> {
     }: {
         byteLength: number;
         decode?: (view: DataView, offset: number) => T;
-        encode?: (view: DataView, offset: number, v: T) => void;
+        encode?: (view: DataView, offset: number, v: { [K in keyof T]: string | number | ArrayBuffer }) => void;
     }) {
         this.byteLength = byteLength || 1;
         this.decode = decode;
@@ -78,7 +80,7 @@ class StructDef<T = unknown> extends TypeDef<T> {
                 Object.keys(defs).forEach((key) => {
                     const def = defs[key];
                     if (offset >= view.byteLength) return;
-                    def.encode(view, offset, obj[key]);
+                    if (key in obj) def.encode(view, offset, obj[key]);
                     offset += def.byteLength;
                 });
             },
@@ -95,16 +97,25 @@ class StructDef<T = unknown> extends TypeDef<T> {
         return this.decode(view, 0);
     }
 
-    pack(obj: any) {
-        const buf = new ArrayBuffer(this.byteLength);
-        const view = new DataView(buf);
-        this.encode(view, 0, obj);
-        return buf;
+    private buf: ArrayBuffer;
+    pack(obj?: TypeValues<T>) {
+        return this.update(obj).buf;
+    }
+
+    update(obj?: TypeValues<T>) {
+        if (!this.buf || this.buf.byteLength !== this.byteLength) {
+            this.buf = new ArrayBuffer(this.byteLength);
+        }
+        if (obj) {
+            const view = new DataView(this.buf);
+            this.encode(view, 0, obj);
+        }
+        return this;
     }
 }
 
-export function struct(defs: any) {
-    return new StructDef(defs);
+export function struct<T>(defs: T) {
+    return new StructDef<T>(defs);
 }
 
 export const int = new TypeDef<number>({
