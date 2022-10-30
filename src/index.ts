@@ -1,10 +1,13 @@
-type TypeValues<T> = Partial<{ [K in keyof T]: string | number | ArrayBuffer | object }>;
+type TypeValue<T> = T extends TypeDef<number> ? number : T extends StructDef ? any : ArrayBuffer;
+type TypeValues<T> = { [K in keyof T]: TypeValue<T[K]> };
 
 class TypeDef<T = unknown> {
     byteLength = 1;
 
     decode: (view: DataView, offset: number) => T;
-    encode: (view: DataView, offset: number, v: TypeValues<T>) => void;
+    encode: (view: DataView, offset: number, v: Partial<T>) => void;
+
+    [K: number]: TypeDef<ArrayBuffer>;
 
     constructor({
         byteLength,
@@ -13,7 +16,7 @@ class TypeDef<T = unknown> {
     }: {
         byteLength: number;
         decode?: (view: DataView, offset: number) => T;
-        encode?: (view: DataView, offset: number, v: { [K in keyof T]: string | number | ArrayBuffer }) => void;
+        encode?: (view: DataView, offset: number, v: Partial<T>) => void;
     }) {
         this.byteLength = byteLength || 1;
         this.decode = decode;
@@ -38,13 +41,11 @@ class TypeDef<T = unknown> {
                             } else if (key === 'encode') {
                                 const encode = obj.encode;
                                 const byteLength = obj.byteLength;
-                                return (view: DataView, offset: number, v: any[]): T[] => {
-                                    const arr: T[] = [];
+                                return (view: DataView, offset: number, v: any[]) => {
                                     for (let i = 0; i < unitCount; i++) {
                                         encode(view, offset, v[i]);
                                         offset += byteLength;
                                     }
-                                    return arr;
                                 };
                             } else if (key === 'byteLength') {
                                 return unitCount * obj.byteLength;
@@ -57,9 +58,35 @@ class TypeDef<T = unknown> {
             },
         });
     }
+
+    get BE() {
+        return this;
+    }
+
+    get LE() {
+        return new TypeDef<number>({
+            byteLength: this.byteLength,
+            decode: (view: DataView, offset: number) => {
+                const bytes = new ArrayBuffer(this.byteLength);
+                const leView = new DataView(bytes);
+                for (let i = 0; i < this.byteLength; i++) {
+                    leView.setUint8(this.byteLength - 1 - i, view.getUint8(offset + i));
+                }
+                return (this as any).decode(leView, 0);
+            },
+            encode: (view: DataView, offset: number, v: number) => {
+                const bytes = new ArrayBuffer(this.byteLength);
+                const leView = new DataView(bytes);
+                (this as any).encode(leView, 0, v);
+                for (let i = 0; i < this.byteLength; i++) {
+                    view.setUint8(offset + i, leView.getUint8(this.byteLength - 1 - i));
+                }
+            },
+        });
+    }
 }
 
-class StructDef<T = unknown> extends TypeDef<T> {
+class StructDef<T = unknown> extends TypeDef<TypeValues<T>> {
     constructor(defs: T) {
         const byteLength = Object.keys(defs)
             .map((key) => defs[key].byteLength)
@@ -87,7 +114,7 @@ class StructDef<T = unknown> extends TypeDef<T> {
         });
     }
 
-    parse(buf: ArrayBufferLike | ArrayLike<number>): { [K in keyof T]: T[K] } {
+    parse(buf: ArrayBufferLike | ArrayLike<number>): TypeValues<T> {
         if (Reflect.has(buf, 'buffer')) {
             buf = buf['buffer'];
         } else if (Array.isArray(buf)) {
@@ -98,11 +125,11 @@ class StructDef<T = unknown> extends TypeDef<T> {
     }
 
     private buf: ArrayBuffer;
-    pack(obj?: TypeValues<T>) {
+    pack(obj?: Partial<TypeValues<T>>) {
         return this.update(obj).buf;
     }
 
-    update(obj?: TypeValues<T>) {
+    update(obj?: Partial<TypeValues<T>>) {
         if (!this.buf || this.buf.byteLength !== this.byteLength) {
             this.buf = new ArrayBuffer(this.byteLength);
         }
@@ -199,28 +226,8 @@ export const float = new TypeDef<number>({
 });
 
 // Big-Endian是默认的
-export const BE = (type: TypeDef<number>) => type;
-
-export const LE = (type: TypeDef<number>) =>
-    new TypeDef<number>({
-        byteLength: type.byteLength,
-        decode: (view: DataView, offset: number) => {
-            const bytes = new ArrayBuffer(type.byteLength);
-            const leView = new DataView(bytes);
-            for (let i = 0; i < type.byteLength; i++) {
-                leView.setUint8(type.byteLength - 1 - i, view.getUint8(offset + i));
-            }
-            return type.decode(leView, 0);
-        },
-        encode: (view: DataView, offset: number, v: number) => {
-            const bytes = new ArrayBuffer(type.byteLength);
-            const leView = new DataView(bytes);
-            type.encode(leView, 0, v);
-            for (let i = 0; i < type.byteLength; i++) {
-                view.setUint8(offset + i, leView.getUint8(type.byteLength - 1 - i));
-            }
-        },
-    });
+export const BE = (type: TypeDef<number>) => type.BE;
+export const LE = (type: TypeDef<number>) => type.LE;
 
 export const INT16_MAX = 0x7fff;
 export const INT16_MIN = -INT16_MAX - 1;
