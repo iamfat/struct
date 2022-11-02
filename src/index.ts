@@ -41,7 +41,10 @@ class TypeDef<T = unknown> {
                             } else if (key === 'encode') {
                                 const encode = obj.encode;
                                 const byteLength = obj.byteLength;
-                                return (view: DataView, offset: number, v: any[]) => {
+                                return (view: DataView, offset: number, v: ArrayBuffer | ArrayLike<any>) => {
+                                    if (v instanceof ArrayBuffer) {
+                                        v = new Uint8Array(v);
+                                    }
                                     for (let i = 0; i < unitCount; i++) {
                                         encode(view, offset, v[i]);
                                         offset += byteLength;
@@ -115,9 +118,7 @@ class StructDef<T = unknown> extends TypeDef<TypeValues<T>> {
     }
 
     parse(buf: ArrayBufferLike | ArrayLike<number>): TypeValues<T> {
-        if (Reflect.has(buf, 'buffer')) {
-            buf = buf['buffer'];
-        } else if (Array.isArray(buf)) {
+        if (Array.isArray(buf)) {
             buf = new Uint8Array(buf).buffer;
         }
         const view = new DataView(buf as ArrayBuffer);
